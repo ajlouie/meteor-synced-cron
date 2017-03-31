@@ -1,11 +1,11 @@
-# saucecode:timezoned-synced-cron
+# ajlouie:meteor-synced-cron
 
-A fork of [percolate:synced-cron](https://atmospherejs.com/percolate/synced-cron) and [trever:synced-cron](https://atmospherejs.com/trever/synced-cron).  Timezone implementation that successfully defaults to UTC and is backwards compatible to percolate:synced-cron.  A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
+A fork of [marcuzy/meteor-synced-cron](https://github.com/marcuzy/meteor-synced-cron/network), packaged for Atmosphere, which was itself forked from [percolate:synced-cron](https://atmospherejs.com/percolate/synced-cron) and [trever:synced-cron](https://atmospherejs.com/trever/synced-cron).  Timezone implementation that successfully defaults to UTC and is backwards compatible to percolate:synced-cron.  A simple cron system for [Meteor](http://meteor.com). It supports syncronizing jobs between multiple processes. In other words, if you add a job that runs every hour and your deployment consists of multiple app servers, only one of the app servers will execute the job each time (whichever tries first).
 
 ## Installation
 
 ``` sh
-$ meteor add saucecode:timezoned-synced-cron
+$ meteor add ajlouie:meteor-synced-cron
 ```
 
 ## API
