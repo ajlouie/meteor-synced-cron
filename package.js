@@ -16,6 +16,6 @@ Package.onUse(function (api) {
 
 
 Package.onTest(function (api) {
-  api.use(['jamesgibson14:synced-cron', 'tinytest', 'underscore', 'logging']);
+  api.use(['ajlouie:meteor-synced-cron', 'tinytest', 'underscore', 'logging']);
   api.add_files('synced-cron-tests.js', ['server']);
 });
