@@ -12,7 +12,7 @@ $ meteor add ajlouie:meteor-synced-cron
 
 ### Basics
 
-To write a cron job, give it a unique name, a schedule an a function to run like below. SyncedCron uses the fantastic [later.js](http://bunkat.github.io/later/) library behind the scenes. A Later.js `parse` object is passed into the schedule call that gives you a huge amount of flexibility for scheduling your jobs, see the [documentation](http://bunkat.github.io/later/parsers.html#overview).
+To write a cron job, give it a unique name, a schedule and a function to run like below. SyncedCron uses the fantastic [later.js](http://bunkat.github.io/later/) library behind the scenes. A Later.js `parse` object is passed into the schedule call that gives you a huge amount of flexibility for scheduling your jobs, see the [documentation](http://bunkat.github.io/later/parsers.html#overview).
 
 ``` js
 SyncedCron.add({
@@ -66,6 +66,8 @@ Call `SyncedCron.stop()` to remove and stop all jobs.
 
 Call `SyncedCron.pause()` to stop all jobs without removing them.  The existing jobs can be rescheduled (i.e. restarted) with `SyncedCron.start()`.
 
+To schedule a once off (i.e not recurring) event, create a job with a schedule like this `parser.recur().on(date).fullDate();`
+
 ### Capturing user timezones
 
 Use [em0ney:jstz](https://atmospherejs.com/em0ney/jstz) to capture your user's timezone string.  Save this to their user profile and even allow them to edit it using [joshowens:timezone-picker](https://atmospherejs.com/joshowens/timezone-picker).  [Good blog post by Josh Owens on timezones in meteor](http://joshowens.me/dealing-with-timezones-in-javascript/).
@@ -90,7 +92,7 @@ You can configure SyncedCron with the `config` method. Defaults are:
     log: true,
 
     // Use a custom logger function (defaults to Meteor's logging package)
-    logger: null
+    logger: null,
 
     // Name of collection to use for synchronisation and logging
     collectionName: 'cronHistory',

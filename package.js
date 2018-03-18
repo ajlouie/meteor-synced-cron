@@ -7,14 +7,15 @@ Package.describe({
 
 Npm.depends({later: '1.2.0', timezone:'1.0.6'});
 
-Package.onUse(function(api) {
-  api.versionsFrom('METEOR@1.4.3.2');
+Package.onUse(function (api) {
+  api.versionsFrom('METEOR@1.3');
   api.use(['underscore', 'check', 'mongo', 'logging'], 'server');
   api.addFiles(['synced-cron-server.js'], 'server');
   api.export(['SyncedCron'], 'server');
 });
 
-Package.onTest(function(api) {
-  api.use(['ajlouie:meteor-synced-cron', 'tinytest']);
-  api.addFiles('synced-cron-tests.js', ['server']);
+
+Package.onTest(function (api) {
+  api.use(['jamesgibson14:synced-cron', 'tinytest', 'underscore', 'logging']);
+  api.add_files('synced-cron-tests.js', ['server']);
 });
