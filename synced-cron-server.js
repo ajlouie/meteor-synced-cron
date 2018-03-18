@@ -138,7 +138,12 @@ Meteor.startup(function() {
 
   // collection holding the job history records
   SyncedCron._collection = new Mongo.Collection(options.collectionName);
-  SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
+
+  try {
+    SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
+  } catch(err){
+    log.error('Error while esnuring index', err);
+  }
 
   if (options.collectionTTL) {
     if (options.collectionTTL > minTTL) {
@@ -158,14 +163,10 @@ var scheduleEntry = function(entry) {
   SyncedCron._setTimezone(entry.timezone, entry);
   var schedule = entry.schedule.call(entry.context, Later.parse);
   var scheduleOffset = entry.scheduleOffset || 0;
-  var startedAt = entry.startedAt;  
-  entry._timer = SyncedCron._laterSetInterval(SyncedCron._entryWrapper(entry), schedule, entry.timezone, scheduleOffset, startedAt);
+  entry._timer = SyncedCron._laterSetInterval(SyncedCron._entryWrapper(entry), schedule, entry.timezone, scheduleOffset);
 
-  var nextDate = !!startedAt ?
-    new Date(Later.schedule(schedule).next(1, startedAt).getTime() + scheduleOffset) :
-    new Date(Later.schedule(schedule).next(1).getTime() + scheduleOffset);
-
-  log.info('Scheduled "' + entry.name + '" next run @' + nextDate);
+  log.info('Scheduled "' + entry.name + '" next run @'
+    + new Date(Later.schedule(schedule).next(1).getTime() + scheduleOffset));
 }
 
 // add a scheduled job
@@ -178,10 +179,6 @@ SyncedCron.add = function(entry) {
   check(entry.name, String);
   check(entry.schedule, Function);
   check(entry.job, Function);
-  
-  if (!!entry.startedAt)
-    check(entry.startedAt, Date);
-  
   entry.context = typeof entry.context === 'object' ? entry.context : {};
   entry.timezone = typeof entry.timezone === 'string' || typeof entry.timezone === 'function' ? entry.timezone : null;
 
@@ -212,20 +209,12 @@ SyncedCron.start = function() {
 
 // Return the next scheduled date of the first matching entry or undefined
 SyncedCron.nextScheduledAtDate = function(jobName) {
-  var entry = this._entries[jobName];  
-  
-  if (!entry)
-    return undefined;
-    
+  var entry = this._entries[jobName];
   var scheduleOffset = entry.scheduleOffset || 0;
-  this._setTimezone(entry.timezone, entry);
-  
-  var schedule = Later.schedule(entry.schedule.call(entry.context, Later.parse));
-  var startedAt = entry.startedAt;
 
-  return !!startedAt ?
-    new Date(schedule.next(1, startedAt).getTime() + scheduleOffset) :
-    new Date(schedule.next(1).getTime() + scheduleOffset);
+  if (entry)
+    this._setTimezone(entry.timezone, entry);
+  return new Date(Later.schedule(entry.schedule(Later.parse)).next(1).getTime() + scheduleOffset);
 }
 
 // Remove and stop the entry referenced by jobName
@@ -237,7 +226,7 @@ SyncedCron.remove = function(jobName) {
       entry._timer.clear();
 
     delete this._entries[jobName];
-    log.info('Removed "' + entry.name);
+    log.info('Removed "' + entry.name + '"');
   }
 }
 
@@ -282,6 +271,9 @@ SyncedCron._entryWrapper = function(entry) {
   var self = this;
 
   return function(intendedAt) {
+    intendedAt = new Date(intendedAt.getTime());
+    intendedAt.setMilliseconds(0);
+
     var jobHistory = {
       intendedAt: intendedAt,
       name: entry.name,
@@ -306,7 +298,7 @@ SyncedCron._entryWrapper = function(entry) {
     // run and record the job
     try {
       log.info('Starting "' + entry.name + '".');
-      var output = entry.job.call(entry.context, intendedAt); // <- Run the actual job
+      var output = entry.job.call(entry.context, intendedAt, entry.name); // <- Run the actual job
 
       log.info('Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
@@ -315,12 +307,12 @@ SyncedCron._entryWrapper = function(entry) {
           result: output
         }
       });
-    } catch (e) {
-      log.info('Exception "' + entry.name +'" ' + e.stack);
+    } catch(e) {
+      log.info('Exception "' + entry.name +'" ' + ((e && e.stack) ? e.stack : e));
       self._collection.update({_id: jobHistory._id}, {
         $set: {
           finishedAt: new Date(),
-          error: e.stack
+          error: (e && e.stack) ? e.stack : e
         }
       });
     }
@@ -343,9 +335,9 @@ SyncedCron._reset = function() {
 //   between multiple, potentially laggy and unsynced machines
 
 // From: https://github.com/bunkat/later/blob/master/src/core/setinterval.js
-SyncedCron._laterSetInterval = function(fn, sched, timezone, scheduleOffset, startedAt) {
+SyncedCron._laterSetInterval = function(fn, sched, timezone, scheduleOffset) {
 
-  var t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset, startedAt),
+  var t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset),
       done = false;
 
   /**
@@ -355,7 +347,15 @@ SyncedCron._laterSetInterval = function(fn, sched, timezone, scheduleOffset, sta
   function scheduleTimeout(intendedAt) {
     if (!done) {
       fn(intendedAt);
-      t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset, startedAt);
+
+      try {
+        fn(intendedAt);
+      } catch(e) {
+        log.info('Exception running scheduled job ' + ((e && e.stack) ? e.stack : e));
+      }
+
+
+      t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset);
     }
   }
 
@@ -374,7 +374,7 @@ SyncedCron._laterSetInterval = function(fn, sched, timezone, scheduleOffset, sta
 };
 
 // From: https://github.com/bunkat/later/blob/master/src/core/settimeout.js
-SyncedCron._laterSetTimeout = function(fn, sched, timezone, scheduleOffset, startedAt) {
+SyncedCron._laterSetTimeout = function(fn, sched, timezone, scheduleOffset) {
 
   var s = Later.schedule(sched), t;
   scheduleTimeout();
@@ -389,11 +389,11 @@ SyncedCron._laterSetTimeout = function(fn, sched, timezone, scheduleOffset, star
     if (timezone && typeof timezone === 'string') {
       SyncedCron._setTimezone(timezone);
     }
-    
-    var _startedAt = (!!startedAt && startedAt.valueOf() > Date.now() ? startedAt.valueOf() : Date.now()) - scheduleOffset,
-        now = Date.now(),
-        next = s.next(2, _startedAt),
+
+    var now = Date.now() - scheduleOffset,
+        next = s.next(2, now),
         diff = next[0].getTime() - now,
+
         intendedAt = next[0];
 
     // minimum time to fire is one second, use next occurrence instead
