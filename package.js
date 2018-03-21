@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Fork of jamesgibson14/meteor-synced-cron. Define and run scheduled jobs across multiple servers.',
-  version: '1.1.3',
+  version: '1.3.2',
   name: 'ajlouie:meteor-synced-cron',
   git: 'https://github.com/ajlouie/meteor-synced-cron.git'
 });
