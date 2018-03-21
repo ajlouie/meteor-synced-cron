@@ -7,9 +7,9 @@
       "integrity": "sha1-8s9sTdeVbdL1IK3wMpg26YdrrQ8="
     },
     "timezone": {
-      "version": "1.0.6",
-      "resolved": "https://registry.npmjs.org/timezone/-/timezone-1.0.6.tgz",
-      "integrity": "sha1-07ULw1xjoJ7Yh2qMw2QmKGhczDM="
+      "version": "0.0.41",
+      "resolved": "https://registry.npmjs.org/timezone/-/timezone-0.0.41.tgz",
+      "integrity": "sha1-4yx+tUky4plJ1E5OfKkRmcs0XAo="
     }
   }
 }

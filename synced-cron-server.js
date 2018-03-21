@@ -12,7 +12,7 @@ SyncedCron = {
     collectionName: 'cronHistory',
 
     //Default to using UTC
-    timezone: 'utc',
+    timezone: 'Etc/UTC',
 
     //TTL in seconds for history records in collection to expire
     //NOTE: Unset to remove expiry but ensure you remove the index from
@@ -30,7 +30,7 @@ Later.date.timezone = function(timezone) {
   var _tz;
 
   // Workaround for UTC which is false
-  if (!timezone) {
+  if (typeof timezone !== 'string') {
     timezone = 'Etc/UTC';
   }
 
@@ -137,7 +137,13 @@ Meteor.startup(function() {
   };
 
   // collection holding the job history records
-  SyncedCron._collection = new Mongo.Collection(options.collectionName);
+  const currentCollection = Mongo.Collection.get(options.collectionName)
+
+  if (!SyncedCron._collection && !currentCollection) {
+    SyncedCron._collection = new Mongo.Collection(options.collectionName);
+  } else {
+    SyncedCron._collection = currentCollection;
+  }
 
   try {
     SyncedCron._collection._ensureIndex({intendedAt: 1, name: 1}, {unique: true});
@@ -179,36 +185,50 @@ SyncedCron.add = function(entry) {
   check(entry.name, String);
   check(entry.schedule, Function);
   check(entry.job, Function);
-  entry.context = typeof entry.context === 'object' ? entry.context : {};
-  entry.timezone = typeof entry.timezone === 'string' || typeof entry.timezone === 'function' ? entry.timezone : null;
 
-  // check
-  if (!this._entries[entry.name]) {
-    this._entries[entry.name] = entry;
+  try {
+    entry.context = typeof entry.context === 'object' ? entry.context : {};
+    entry.timezone = typeof entry.timezone === 'string' || typeof entry.timezone === 'function' ? entry.timezone : null;
 
-    // If cron is already running, start directly.
-    if (this.running) {
-      scheduleEntry(entry);
+    // check
+    if (!this._entries[entry.name]) {
+      this._entries[entry.name] = entry;
+
+      // If cron is already running, start directly.
+      if (this.running) {
+        scheduleEntry(entry);
+      }
     }
+  } catch (e) {
+    throw e;
   }
 }
 
 // Start processing added jobs
 SyncedCron.start = function() {
-  var self = this;
+  try {
+    var self = this;
 
-  Meteor.startup(function() {
-    // Schedule each job with later.js
-    _.each(self._entries, function(entry) {
-      scheduleEntry(entry);
+    Meteor.startup(function() {
+      // Schedule each job with later.js
+      _.each(self._entries, function(entry) {
+        scheduleEntry(entry);
+      });
+
+      self.running = true;
     });
-
-    self.running = true;
-  });
+  } catch (e) {
+    throw e;
+  }
 }
 
 // Return the next scheduled date of the first matching entry or undefined
 SyncedCron.nextScheduledAtDate = function(jobName) {
+  try {
+
+  } catch (e) {
+    throw e;
+  }
   var entry = this._entries[jobName];
   var scheduleOffset = entry.scheduleOffset || 0;
 
@@ -219,6 +239,11 @@ SyncedCron.nextScheduledAtDate = function(jobName) {
 
 // Remove and stop the entry referenced by jobName
 SyncedCron.remove = function(jobName) {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   var entry = this._entries[jobName];
 
   if (entry) {
@@ -233,6 +258,11 @@ SyncedCron.remove = function(jobName) {
 // Pause processing, but do not remove jobs so that the start method will
 // restart existing jobs
 SyncedCron.pause = function() {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   if (this.running) {
     _.each(this._entries, function(entry) {
       entry._timer.clear();
@@ -244,6 +274,11 @@ SyncedCron.pause = function() {
 
 // Stop processing and remove ALL jobs
 SyncedCron.stop = function() {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   _.each(this._entries, function(entry, name) {
     SyncedCron.remove(name);
   });
@@ -252,6 +287,11 @@ SyncedCron.stop = function() {
 }
 
 SyncedCron._setTimezone = function(timezone, entry) {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   if (timezone === 'utc') {
     Later.date.UTC();
   } else if (timezone === 'localtime') {
@@ -268,6 +308,11 @@ SyncedCron._setTimezone = function(timezone, entry) {
 // The meat of our logic. Checks if the specified has already run. If not,
 // records that it's running the job, runs it, and records the output
 SyncedCron._entryWrapper = function(entry) {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   var self = this;
 
   return function(intendedAt) {
@@ -321,8 +366,17 @@ SyncedCron._entryWrapper = function(entry) {
 
 // for tests
 SyncedCron._reset = function() {
+  try {
+    
+  } catch (e) {
+    throw e;
+  }
   this._entries = {};
-  this._collection.remove({});
+
+  if (this._collection) {
+    this._collection.remove({});
+  }
+
   this.running = false;
 }
 
@@ -336,40 +390,42 @@ SyncedCron._reset = function() {
 
 // From: https://github.com/bunkat/later/blob/master/src/core/setinterval.js
 SyncedCron._laterSetInterval = function(fn, sched, timezone, scheduleOffset) {
-
-  var t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset),
-      done = false;
-
-  /**
-  * Executes the specified function and then sets the timeout for the next
-  * interval.
-  */
-  function scheduleTimeout(intendedAt) {
-    if (!done) {
-      fn(intendedAt);
-
-      try {
-        fn(intendedAt);
-      } catch(e) {
-        log.info('Exception running scheduled job ' + ((e && e.stack) ? e.stack : e));
-      }
-
-
-      t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset);
-    }
-  }
-
-  return {
+  try {
+    var t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset),
+        done = false;
 
     /**
-    * Clears the timeout.
+    * Executes the specified function and then sets the timeout for the next
+    * interval.
     */
-    clear: function() {
-      done = true;
-      t.clear();
+    function scheduleTimeout(intendedAt) {
+      if (!done) {
+        try {
+          fn(intendedAt);
+        } catch(e) {
+          log.info('Exception running scheduled job ' + ((e && e.stack) ? e.stack : e));
+        }
+
+        t = SyncedCron._laterSetTimeout(scheduleTimeout, sched, timezone, scheduleOffset);
+      }
     }
 
-  };
+    return {
+      /**
+      * Clears the timeout.
+      */
+      clear: function() {
+        done = true;
+        t.clear();
+      }
+
+    };
+
+
+  } catch (e) {
+    log.info('Exception setting timeout ' + ((e && e.stack) ? e.stack : e));
+  }
+
 
 };
 

@@ -1,4 +1,4 @@
-ajlouie:meteor-synced-cron@1.1.1
+ajlouie:meteor-synced-cron@1.1.2
 allow-deny@1.1.0
 babel-compiler@7.0.5
 babel-runtime@1.2.0
@@ -21,7 +21,7 @@ ejson@1.1.0
 geojson-utils@1.0.10
 http@1.4.0
 id-map@1.1.0
-local-test:ajlouie:meteor-synced-cron@1.1.1
+local-test:ajlouie:meteor-synced-cron@1.1.2
 logging@1.1.19
 meteor@1.8.2
 minimongo@1.4.3
